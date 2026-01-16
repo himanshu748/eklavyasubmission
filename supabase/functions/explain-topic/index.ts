@@ -9,50 +9,71 @@ const corsHeaders = {
 function ensureLatexDelimiters(text: string): string {
   if (!text || typeof text !== 'string') return text;
   
-  // If already has $ delimiters, return as is
-  if (text.includes('$')) return text;
-  
-  // Common LaTeX patterns that should be wrapped
-  const latexPatterns = [
-    /\\frac\{[^}]+\}\{[^}]+\}/g,
-    /\\sqrt\{[^}]+\}/g,
-    /\\text\{[^}]+\}/g,
-    /\\Delta\s*\w+/g,
-    /\\vec\{[^}]+\}/g,
-    /\\sum|\\int|\\prod/g,
-    /\\alpha|\\beta|\\gamma|\\theta|\\omega|\\lambda|\\mu|\\sigma|\\pi/g,
-    /\\times|\\div|\\pm|\\mp|\\cdot/g,
-    /\\leq|\\geq|\\neq|\\approx/g,
-    /\^\{[^}]+\}|_\{[^}]+\}/g,
-  ];
-  
-  let hasLatex = false;
-  for (const pattern of latexPatterns) {
-    if (pattern.test(text)) {
-      hasLatex = true;
-      break;
-    }
-  }
-  
-  // If the text contains LaTeX commands but no $, wrap standalone equations
-  if (hasLatex) {
-    // Find lines that are purely mathematical (contain LaTeX but minimal text)
-    const lines = text.split('\n');
-    const processedLines = lines.map(line => {
-      const trimmed = line.trim();
-      // If line starts with a backslash command or contains = with LaTeX, wrap it
-      if (/^\\[a-zA-Z]/.test(trimmed) || (/=/.test(trimmed) && /\\[a-zA-Z]/.test(trimmed))) {
-        // Check if it's a display equation (standalone line)
-        if (trimmed.length > 0 && !trimmed.startsWith('$')) {
-          return `$$${trimmed}$$`;
-        }
-      }
+  // Process line by line to handle multi-line content
+  const lines = text.split('\n');
+  const processedLines = lines.map(line => {
+    const trimmed = line.trim();
+    if (!trimmed) return line;
+    
+    // Skip if line is already properly wrapped (starts and ends with $)
+    if (/^\$\$.*\$\$$/.test(trimmed) || /^\$[^$].*[^$]\$$/.test(trimmed)) {
       return line;
-    });
-    return processedLines.join('\n');
-  }
+    }
+    
+    // Check if line contains raw LaTeX patterns (not wrapped in $)
+    // First, temporarily remove already-wrapped content to check for unwrapped LaTeX
+    const withoutWrapped = trimmed.replace(/\$\$[^$]+\$\$/g, '').replace(/\$[^$]+\$/g, '');
+    
+    const rawLatexPatterns = [
+      /\\frac\s*\{/,
+      /\\sqrt\s*[\[{]/,
+      /\\text\s*\{/,
+      /\\Delta\b/,
+      /\\vec\s*\{/,
+      /\\sum\b|\\int\b|\\prod\b/,
+      /\\alpha\b|\\beta\b|\\gamma\b|\\theta\b|\\omega\b|\\lambda\b|\\mu\b|\\sigma\b|\\pi\b/,
+      /\\times\b|\\div\b|\\pm\b|\\mp\b|\\cdot\b/,
+      /\\leq\b|\\geq\b|\\neq\b|\\approx\b/,
+      /\^\s*\{[^}]+\}|_\s*\{[^}]+\}/,
+      /\\left\b|\\right\b/,
+      /\\boxed\b/,
+    ];
+    
+    const hasRawLatex = rawLatexPatterns.some(pattern => pattern.test(withoutWrapped));
+    
+    // If the line is primarily a math expression (contains = and LaTeX, or starts with \)
+    if (hasRawLatex) {
+      // Check if it's a standalone equation line (not mixed with lots of text)
+      const isEquationLine = /^[\\$a-zA-Z0-9\s=+\-*/^_{}\[\]().,]+$/.test(trimmed) || 
+                             /=\s*\\/.test(trimmed) ||
+                             /^\\[a-zA-Z]/.test(trimmed);
+      
+      if (isEquationLine && !trimmed.startsWith('$')) {
+        return `$$${trimmed}$$`;
+      }
+      
+      // For inline LaTeX within text, wrap individual expressions
+      let result = line;
+      
+      // Wrap standalone equations like: a = \frac{...}{...}
+      result = result.replace(
+        /(?<!\$)([a-zA-Z_]\s*=\s*\\[a-zA-Z]+\{[^}]+\}(?:\{[^}]+\})?(?:\s*=\s*[0-9.]+(?:\s*\\text\{[^}]+\})?)?)/g,
+        '$$$$1$$'
+      );
+      
+      // Wrap \Delta patterns
+      result = result.replace(
+        /(?<!\$)(\\Delta\s*[a-zA-Z]+\s*=\s*[^$\n]+?)(?=\s*$|\s+[A-Z])/g,
+        '$$$$1$$'
+      );
+      
+      return result;
+    }
+    
+    return line;
+  });
   
-  return text;
+  return processedLines.join('\n');
 }
 
 // Process the entire response to fix LaTeX delimiters
