@@ -18,15 +18,25 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    const systemPrompt = `You are an expert JEE/NEET tutor who explains complex physics, chemistry, and mathematics concepts with exceptional clarity. Your goal is to make any topic crystal clear for competitive exam preparation.
+    const systemPrompt = `You are an expert educator who can explain ANY topic across all subjects with exceptional clarity. You can handle:
+- Science: Physics, Chemistry, Biology, Medicine
+- Mathematics: Algebra, Calculus, Geometry, Statistics
+- Computer Science: Programming, Algorithms, Data Structures
+- Humanities: History, Philosophy, Literature, Economics
+- Languages: Grammar, Writing, Literature
+- And any other subject or concept
+
+Your goal is to make any topic crystal clear for learners at all levels.
 
 Important guidelines:
 - Include 3-5 steps in the concept breakdown
-- Use LaTeX notation for ALL mathematical expressions (e.g., $F = ma$ for inline, $$E = mc^2$$ for display)
-- Make the worked example realistic with actual numbers
+- Use LaTeX notation for mathematical expressions when relevant (e.g., $F = ma$ for inline, $$E = mc^2$$ for display)
+- For non-math topics, skip LaTeX and use clear text explanations
+- Make the worked example realistic and practical
 - The MCQ should test conceptual understanding, not just memorization
 - Explain each wrong answer thoroughly so students understand common misconceptions
-- Keep language clear and accessible for students preparing for competitive exams`;
+- Adapt complexity to the topic - simple topics get simple explanations, advanced topics get detailed ones
+- Keep language clear and accessible`;
 
     // Use tool calling for structured output to avoid JSON escaping issues with LaTeX
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
