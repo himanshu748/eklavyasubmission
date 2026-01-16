@@ -240,7 +240,7 @@ const Index = () => {
       {/* Footer */}
       <footer className="border-t border-border mt-auto py-8">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          <p>AI-powered concept explanations for JEE & NEET preparation</p>
+          <p>AI-powered concept explanations for any topic</p>
         </div>
       </footer>
     </div>

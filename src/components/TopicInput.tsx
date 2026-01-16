@@ -11,9 +11,9 @@ interface TopicInputProps {
 
 const suggestedTopics = [
   { label: "Newton's Laws", icon: Atom },
-  { label: "Chemical Bonding", icon: FlaskConical },
-  { label: "Quadratic Equations", icon: Calculator },
-  { label: "Thermodynamics", icon: BookOpen },
+  { label: "Machine Learning Basics", icon: Calculator },
+  { label: "World War II", icon: BookOpen },
+  { label: "Photosynthesis", icon: FlaskConical },
 ];
 
 const TopicInput = ({ onSubmit, isLoading }: TopicInputProps) => {
@@ -53,7 +53,7 @@ const TopicInput = ({ onSubmit, isLoading }: TopicInputProps) => {
           Concept Explainer
         </h1>
         <p className="text-lg text-muted-foreground max-w-lg mx-auto">
-          Enter any JEE/NEET topic and get a crystal-clear explanation with worked examples and practice questions.
+          Enter any topic and get a crystal-clear explanation with worked examples and practice questions.
         </p>
       </div>
 
@@ -66,7 +66,7 @@ const TopicInput = ({ onSubmit, isLoading }: TopicInputProps) => {
             type="text"
             value={topic}
             onChange={(e) => setTopic(e.target.value)}
-            placeholder="e.g., Newton's Laws of Motion, Organic Chemistry, Integration..."
+            placeholder="e.g., Newton's Laws, Machine Learning, World History, Photosynthesis..."
             className="w-full pl-12 pr-32 py-6 text-lg rounded-xl border-2 border-border bg-card shadow-sm focus:border-accent focus:ring-accent transition-all"
             disabled={isLoading}
           />
