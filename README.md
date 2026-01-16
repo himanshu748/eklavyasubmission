@@ -1,73 +1,200 @@
-# Welcome to your Lovable project
+# 🎓 AI Concept Explainer for JEE & NEET
 
-## Project info
+An AI-powered web application that provides crystal-clear explanations for JEE (Joint Entrance Examination) and NEET (National Eligibility cum Entrance Test) topics. Built for students preparing for India's most competitive engineering and medical entrance exams.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+![AI Concept Explainer](https://img.shields.io/badge/AI-Powered-blue) ![JEE](https://img.shields.io/badge/JEE-Main%20%26%20Advanced-orange) ![NEET](https://img.shields.io/badge/NEET-UG-green)
 
-## How can I edit this code?
+## ✨ Features
 
-There are several ways of editing your application.
+### 📚 Comprehensive Topic Coverage
 
-**Use Lovable**
+**JEE (Main & Advanced):**
+- **Physics**: Mechanics, Thermodynamics, Electromagnetism, Optics, Modern Physics, Waves & Oscillations
+- **Chemistry**: Physical Chemistry, Organic Chemistry, Inorganic Chemistry
+- **Mathematics**: Algebra, Calculus, Coordinate Geometry, Trigonometry, Vectors, Probability & Statistics
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+**NEET:**
+- **Physics**: Classical Mechanics, Thermodynamics, Electrostatics, Magnetism, Optics
+- **Chemistry**: Physical, Organic & Inorganic Chemistry with biological applications
+- **Biology**: Botany, Zoology, Human Physiology, Genetics, Ecology, Cell Biology, Molecular Biology
 
-Changes made via Lovable will be committed automatically to this repo.
+### 🧠 Smart Explanations
 
-**Use your preferred IDE**
+Each topic explanation includes:
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+1. **Step-by-Step Breakdown** - Concepts explained in 3-5 digestible steps with proper mathematical notation
+2. **Worked Example** - A realistic numerical problem with complete solution, matching JEE/NEET exam pattern
+3. **Practice MCQ** - Multiple choice question with:
+   - 4 options matching exam format
+   - Detailed explanation of the correct answer
+   - Analysis of why each wrong answer is incorrect (common traps and misconceptions)
+4. **Key Takeaways** - Quick revision points to remember
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### 🔢 Beautiful Math Rendering
 
-Follow these steps:
+- LaTeX-powered mathematical expressions using KaTeX
+- Inline formulas: `$F = ma$`, `$E = mc^2$`
+- Display equations for complex derivations
+- Chemical equations and biological nomenclature
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+## 🛠️ Tech Stack
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+- **Frontend**: React 18 + TypeScript + Vite
+- **Styling**: Tailwind CSS + shadcn/ui components
+- **Animations**: Framer Motion
+- **Math Rendering**: KaTeX
+- **Backend**: Supabase Edge Functions
+- **AI**: Lovable AI Gateway (Google Gemini)
 
-# Step 3: Install the necessary dependencies.
-npm i
+## 🚀 Getting Started
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+### Prerequisites
+
+- Node.js 18+ 
+- npm or bun package manager
+
+### Installation
+
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd ai-concept-explainer
+```
+
+2. Install dependencies:
+```bash
+npm install
+```
+
+3. Set up environment variables:
+```bash
+# .env file is auto-configured with Lovable Cloud
+VITE_SUPABASE_URL=<your-supabase-url>
+VITE_SUPABASE_PUBLISHABLE_KEY=<your-anon-key>
+```
+
+4. Start the development server:
+```bash
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+5. Open [http://localhost:5173](http://localhost:5173) in your browser
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## 📁 Project Structure
 
-**Use GitHub Codespaces**
+```
+├── src/
+│   ├── components/
+│   │   ├── ExplanationCard.tsx    # Card wrapper for sections
+│   │   ├── KeyTakeaways.tsx       # Key points component
+│   │   ├── LoadingState.tsx       # Loading animation
+│   │   ├── MathRenderer.tsx       # LaTeX math rendering
+│   │   ├── MCQSection.tsx         # MCQ with answer reveal
+│   │   ├── StepBreakdown.tsx      # Step-by-step content
+│   │   ├── TopicInput.tsx         # Search input
+│   │   └── WorkedExample.tsx      # Problem solution display
+│   ├── pages/
+│   │   └── Index.tsx              # Main application page
+│   └── hooks/
+│       └── use-toast.ts           # Toast notifications
+├── supabase/
+│   └── functions/
+│       └── explain-topic/         # AI edge function
+│           └── index.ts
+└── README.md
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## 🎯 Usage
 
-## What technologies are used for this project?
+1. **Enter a Topic**: Type any JEE/NEET topic in the search bar
+   - Examples: "Newton's Laws", "Organic Chemistry Reactions", "Integration by Parts", "Cell Division"
 
-This project is built with:
+2. **Get Explanation**: Click "Explain" to generate a comprehensive breakdown
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+3. **Learn**: 
+   - Read through the step-by-step concept breakdown
+   - Study the worked example with full solution
+   - Test yourself with the practice MCQ
+   - Review key takeaways for quick revision
 
-## How can I deploy this project?
+4. **Explore More**: Click "Explore Another Topic" to learn something new
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+## 📖 Supported Topics
 
-## Can I connect a custom domain to my Lovable project?
+### Physics (JEE & NEET)
+| Topic | Subtopics |
+|-------|-----------|
+| Mechanics | Kinematics, Newton's Laws, Work-Energy, Rotational Motion, Gravitation |
+| Thermodynamics | Laws of Thermodynamics, Heat Transfer, Kinetic Theory |
+| Electromagnetism | Electrostatics, Current Electricity, Magnetism, EMI |
+| Optics | Ray Optics, Wave Optics, Optical Instruments |
+| Modern Physics | Photoelectric Effect, Atomic Structure, Nuclear Physics |
+| Waves | SHM, Wave Motion, Sound, Doppler Effect |
 
-Yes, you can!
+### Chemistry (JEE & NEET)
+| Topic | Subtopics |
+|-------|-----------|
+| Physical Chemistry | Atomic Structure, Chemical Bonding, Thermodynamics, Equilibrium, Electrochemistry |
+| Organic Chemistry | Hydrocarbons, Functional Groups, Reaction Mechanisms, Biomolecules |
+| Inorganic Chemistry | Periodic Table, Coordination Compounds, Metallurgy, p-block Elements |
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+### Mathematics (JEE)
+| Topic | Subtopics |
+|-------|-----------|
+| Algebra | Quadratic Equations, Complex Numbers, Matrices, Sequences & Series |
+| Calculus | Limits, Differentiation, Integration, Differential Equations |
+| Coordinate Geometry | Straight Lines, Circles, Conic Sections |
+| Trigonometry | Identities, Equations, Inverse Functions |
+| Vectors & 3D | Vector Algebra, 3D Geometry |
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+### Biology (NEET)
+| Topic | Subtopics |
+|-------|-----------|
+| Botany | Plant Anatomy, Photosynthesis, Plant Reproduction, Ecology |
+| Zoology | Animal Physiology, Human Reproduction, Evolution |
+| Cell Biology | Cell Structure, Cell Division, Biomolecules |
+| Genetics | Mendelian Genetics, Molecular Biology, Biotechnology |
+
+## 🔧 API Reference
+
+### Edge Function: `explain-topic`
+
+**Endpoint**: `POST /functions/v1/explain-topic`
+
+**Request Body**:
+```json
+{
+  "topic": "Newton's Laws of Motion"
+}
+```
+
+**Response**:
+```json
+{
+  "title": "Newton's Laws of Motion",
+  "overview": "...",
+  "steps": [...],
+  "workedExample": {...},
+  "mcq": {...},
+  "keyTakeaways": [...]
+}
+```
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## 📄 License
+
+This project is open source and available under the MIT License.
+
+## 🙏 Acknowledgments
+
+- Built with [Lovable](https://lovable.dev)
+- AI powered by Lovable AI Gateway
+- Math rendering by [KaTeX](https://katex.org)
+- UI components from [shadcn/ui](https://ui.shadcn.com)
+
+---
+
+**Made with ❤️ for JEE & NEET aspirants**
