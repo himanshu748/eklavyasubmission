@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useMemo } from 'react';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
 
@@ -8,68 +8,69 @@ interface MathRendererProps {
 }
 
 const MathRenderer = ({ content, className = '' }: MathRendererProps) => {
-  const containerRef = useRef<HTMLDivElement>(null);
+  const renderedContent = useMemo(() => {
+    if (!content) return '';
 
-  useEffect(() => {
-    if (!containerRef.current || !content) return;
+    // Split content into parts: text and math expressions
+    const parts: Array<{ type: 'text' | 'display-math' | 'inline-math'; content: string }> = [];
+    let remaining = content;
 
-    // Process the content to render LaTeX
-    let processedContent = content;
+    // Regex to find math expressions
+    const mathRegex = /(\$\$[\s\S]*?\$\$|\$[^$\n]+?\$)/g;
+    let lastIndex = 0;
+    let match;
 
-    // First, handle escaped dollar signs to prevent them from being treated as math delimiters
-    const escapedPlaceholder = '___ESCAPED_DOLLAR___';
-    processedContent = processedContent.replace(/\\\$/g, escapedPlaceholder);
+    while ((match = mathRegex.exec(content)) !== null) {
+      // Add text before this match
+      if (match.index > lastIndex) {
+        parts.push({ type: 'text', content: content.slice(lastIndex, match.index) });
+      }
 
-    // Replace display math ($$...$$) - handle multiline
-    processedContent = processedContent.replace(/\$\$([\s\S]*?)\$\$/g, (match, math) => {
+      // Determine if it's display or inline math
+      const mathContent = match[0];
+      if (mathContent.startsWith('$$')) {
+        parts.push({ type: 'display-math', content: mathContent.slice(2, -2).trim() });
+      } else {
+        parts.push({ type: 'inline-math', content: mathContent.slice(1, -1).trim() });
+      }
+
+      lastIndex = mathRegex.lastIndex;
+    }
+
+    // Add remaining text
+    if (lastIndex < content.length) {
+      parts.push({ type: 'text', content: content.slice(lastIndex) });
+    }
+
+    // Render each part
+    return parts.map((part, index) => {
+      if (part.type === 'text') {
+        return part.content;
+      }
+
       try {
-        const rendered = katex.renderToString(math.trim(), {
-          displayMode: true,
+        const html = katex.renderToString(part.content, {
+          displayMode: part.type === 'display-math',
           throwOnError: false,
           trust: true,
           strict: false,
         });
-        return `<div class="katex-display my-4">${rendered}</div>`;
+
+        if (part.type === 'display-math') {
+          return `<div class="katex-display my-4 overflow-x-auto">${html}</div>`;
+        }
+        return html;
       } catch (e) {
-        console.error('KaTeX display error:', e, 'Math:', math);
-        return `<code class="bg-muted px-2 py-1 rounded text-sm">${math}</code>`;
+        console.error('KaTeX error:', e, 'Content:', part.content);
+        return `<code class="bg-muted px-1 py-0.5 rounded text-sm font-mono">${part.content}</code>`;
       }
-    });
-
-    // Replace inline math ($...$) - be more permissive with content
-    processedContent = processedContent.replace(/\$([^$]+?)\$/g, (match, math) => {
-      // Skip if it looks like a currency value (e.g., $100)
-      if (/^\d+([.,]\d+)?$/.test(math.trim())) {
-        return match;
-      }
-      
-      try {
-        const rendered = katex.renderToString(math.trim(), {
-          displayMode: false,
-          throwOnError: false,
-          trust: true,
-          strict: false,
-        });
-        return rendered;
-      } catch (e) {
-        console.error('KaTeX inline error:', e, 'Math:', math);
-        return `<code class="bg-muted px-1 py-0.5 rounded text-sm">${math}</code>`;
-      }
-    });
-
-    // Restore escaped dollar signs
-    processedContent = processedContent.replace(new RegExp(escapedPlaceholder, 'g'), '$');
-
-    // Handle line breaks
-    processedContent = processedContent.replace(/\n/g, '<br/>');
-
-    containerRef.current.innerHTML = processedContent;
+    }).join('');
   }, [content]);
 
   return (
-    <div 
-      ref={containerRef} 
-      className={`math-content leading-relaxed [&_.katex]:text-inherit ${className}`}
+    <span
+      className={`math-content ${className}`}
+      dangerouslySetInnerHTML={{ __html: renderedContent }}
     />
   );
 };
