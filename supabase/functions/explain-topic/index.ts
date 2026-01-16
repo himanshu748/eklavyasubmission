@@ -20,53 +20,15 @@ serve(async (req) => {
 
     const systemPrompt = `You are an expert JEE/NEET tutor who explains complex physics, chemistry, and mathematics concepts with exceptional clarity. Your goal is to make any topic crystal clear for competitive exam preparation.
 
-When explaining a topic, you MUST structure your response EXACTLY in this JSON format:
-
-{
-  "title": "Topic Name",
-  "overview": "A brief 2-3 sentence overview of what this topic is about and why it's important for JEE/NEET",
-  "steps": [
-    {
-      "stepNumber": 1,
-      "title": "Step title",
-      "content": "Detailed explanation of this concept. Use simple language. Include relevant formulas using LaTeX format like $F = ma$ for inline or $$E = mc^2$$ for display equations."
-    }
-  ],
-  "workedExample": {
-    "problem": "A specific numerical problem statement",
-    "given": ["List of given values with units"],
-    "toFind": "What we need to find",
-    "solution": [
-      {
-        "step": 1,
-        "explanation": "What we do in this step",
-        "calculation": "The mathematical calculation using LaTeX like $v = u + at = 0 + 2 \\times 5 = 10 \\text{ m/s}$"
-      }
-    ],
-    "answer": "Final answer with units and proper formatting"
-  },
-  "mcq": {
-    "question": "A well-crafted MCQ testing the concept",
-    "options": ["A) Option 1", "B) Option 2", "C) Option 3", "D) Option 4"],
-    "correctAnswer": "A",
-    "explanation": "Detailed explanation of why the correct answer is correct",
-    "wrongAnswerExplanations": {
-      "B": "Why option B is wrong",
-      "C": "Why option C is wrong", 
-      "D": "Why option D is wrong"
-    }
-  },
-  "keyTakeaways": ["Key point 1", "Key point 2", "Key point 3"]
-}
-
 Important guidelines:
 - Include 3-5 steps in the concept breakdown
-- Use LaTeX notation for ALL mathematical expressions
+- Use LaTeX notation for ALL mathematical expressions (e.g., $F = ma$ for inline, $$E = mc^2$$ for display)
 - Make the worked example realistic with actual numbers
 - The MCQ should test conceptual understanding, not just memorization
 - Explain each wrong answer thoroughly so students understand common misconceptions
 - Keep language clear and accessible for students preparing for competitive exams`;
 
+    // Use tool calling for structured output to avoid JSON escaping issues with LaTeX
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -77,8 +39,90 @@ Important guidelines:
         model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `Explain the topic: "${topic}" for JEE/NEET preparation. Provide a comprehensive breakdown following the exact JSON structure specified.` }
+          { role: "user", content: `Explain the topic: "${topic}" for JEE/NEET preparation. Use the explain_topic tool to provide a comprehensive breakdown.` }
         ],
+        tools: [
+          {
+            type: "function",
+            function: {
+              name: "explain_topic",
+              description: "Provide a structured explanation of a JEE/NEET topic with steps, worked example, MCQ, and key takeaways",
+              parameters: {
+                type: "object",
+                properties: {
+                  title: { 
+                    type: "string", 
+                    description: "The topic name/title" 
+                  },
+                  overview: { 
+                    type: "string", 
+                    description: "A brief 2-3 sentence overview of the topic and its importance for JEE/NEET" 
+                  },
+                  steps: {
+                    type: "array",
+                    description: "3-5 step-by-step concept breakdown",
+                    items: {
+                      type: "object",
+                      properties: {
+                        stepNumber: { type: "number" },
+                        title: { type: "string" },
+                        content: { type: "string", description: "Detailed explanation with LaTeX formulas like $F = ma$" }
+                      },
+                      required: ["stepNumber", "title", "content"]
+                    }
+                  },
+                  workedExample: {
+                    type: "object",
+                    properties: {
+                      problem: { type: "string", description: "A specific numerical problem statement" },
+                      given: { type: "array", items: { type: "string" }, description: "List of given values with units" },
+                      toFind: { type: "string", description: "What we need to find" },
+                      solution: {
+                        type: "array",
+                        items: {
+                          type: "object",
+                          properties: {
+                            step: { type: "number" },
+                            explanation: { type: "string" },
+                            calculation: { type: "string", description: "Mathematical calculation with LaTeX" }
+                          },
+                          required: ["step", "explanation", "calculation"]
+                        }
+                      },
+                      answer: { type: "string", description: "Final answer with units" }
+                    },
+                    required: ["problem", "given", "toFind", "solution", "answer"]
+                  },
+                  mcq: {
+                    type: "object",
+                    properties: {
+                      question: { type: "string" },
+                      options: { type: "array", items: { type: "string" }, description: "4 options labeled A), B), C), D)" },
+                      correctAnswer: { type: "string", description: "Just the letter: A, B, C, or D" },
+                      explanation: { type: "string", description: "Why the correct answer is correct" },
+                      wrongAnswerExplanations: {
+                        type: "object",
+                        properties: {
+                          B: { type: "string" },
+                          C: { type: "string" },
+                          D: { type: "string" }
+                        }
+                      }
+                    },
+                    required: ["question", "options", "correctAnswer", "explanation", "wrongAnswerExplanations"]
+                  },
+                  keyTakeaways: {
+                    type: "array",
+                    items: { type: "string" },
+                    description: "3-5 key points to remember"
+                  }
+                },
+                required: ["title", "overview", "steps", "workedExample", "mcq", "keyTakeaways"]
+              }
+            }
+          }
+        ],
+        tool_choice: { type: "function", function: { name: "explain_topic" } },
         temperature: 0.7,
       }),
     });
@@ -105,54 +149,34 @@ Important guidelines:
     }
 
     const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
-
-    if (!content) {
-      throw new Error("No content in response");
-    }
-
-    // Parse the JSON from the response
-    let parsedContent;
-    try {
-      // Try to extract JSON from the response (it might be wrapped in markdown code blocks)
-      const jsonMatch = content.match(/```json\n?([\s\S]*?)\n?```/) || content.match(/```\n?([\s\S]*?)\n?```/);
-      let jsonString = jsonMatch ? jsonMatch[1] : content;
-      
-      // Fix common LaTeX escape issues in JSON
-      // The AI often returns LaTeX with single backslashes which break JSON parsing
-      // We need to escape backslashes that aren't already escaped
-      jsonString = jsonString.replace(/\\(?!["\\/bfnrtu])/g, '\\\\');
-      
-      parsedContent = JSON.parse(jsonString.trim());
-    } catch (parseError) {
-      console.error("Failed to parse JSON:", parseError);
-      
-      // Try a more aggressive fix for LaTeX escaping
+    
+    // Extract the tool call arguments
+    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+    
+    if (toolCall?.function?.arguments) {
       try {
-        const jsonMatch = content.match(/```json\n?([\s\S]*?)\n?```/) || content.match(/```\n?([\s\S]*?)\n?```/);
-        let jsonString = jsonMatch ? jsonMatch[1] : content;
-        
-        // Replace all backslashes with double backslashes, then fix the over-escaped ones
-        jsonString = jsonString
-          .replace(/\\/g, '\\\\')
-          .replace(/\\\\\\\\/g, '\\\\') // Fix quadruple backslashes
-          .replace(/\\\\"/g, '\\"')     // Fix escaped quotes
-          .replace(/\\\\n/g, '\\n')     // Fix newlines
-          .replace(/\\\\t/g, '\\t');    // Fix tabs
-        
-        parsedContent = JSON.parse(jsonString.trim());
-      } catch (secondError) {
-        console.error("Second parse attempt failed:", secondError);
-        // Return raw content if parsing fails
-        return new Response(JSON.stringify({ rawContent: content }), {
+        const parsedContent = JSON.parse(toolCall.function.arguments);
+        return new Response(JSON.stringify(parsedContent), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (parseError) {
+        console.error("Failed to parse tool arguments:", parseError);
+        return new Response(JSON.stringify({ error: "Failed to parse AI response" }), {
+          status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
     }
 
-    return new Response(JSON.stringify(parsedContent), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    // Fallback to regular content if no tool call
+    const content = data.choices?.[0]?.message?.content;
+    if (content) {
+      return new Response(JSON.stringify({ rawContent: content }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    throw new Error("No content in response");
   } catch (error) {
     console.error("Error:", error);
     return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), {
