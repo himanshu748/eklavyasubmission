@@ -116,14 +116,38 @@ Important guidelines:
     try {
       // Try to extract JSON from the response (it might be wrapped in markdown code blocks)
       const jsonMatch = content.match(/```json\n?([\s\S]*?)\n?```/) || content.match(/```\n?([\s\S]*?)\n?```/);
-      const jsonString = jsonMatch ? jsonMatch[1] : content;
+      let jsonString = jsonMatch ? jsonMatch[1] : content;
+      
+      // Fix common LaTeX escape issues in JSON
+      // The AI often returns LaTeX with single backslashes which break JSON parsing
+      // We need to escape backslashes that aren't already escaped
+      jsonString = jsonString.replace(/\\(?!["\\/bfnrtu])/g, '\\\\');
+      
       parsedContent = JSON.parse(jsonString.trim());
     } catch (parseError) {
       console.error("Failed to parse JSON:", parseError);
-      // Return raw content if parsing fails
-      return new Response(JSON.stringify({ rawContent: content }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      
+      // Try a more aggressive fix for LaTeX escaping
+      try {
+        const jsonMatch = content.match(/```json\n?([\s\S]*?)\n?```/) || content.match(/```\n?([\s\S]*?)\n?```/);
+        let jsonString = jsonMatch ? jsonMatch[1] : content;
+        
+        // Replace all backslashes with double backslashes, then fix the over-escaped ones
+        jsonString = jsonString
+          .replace(/\\/g, '\\\\')
+          .replace(/\\\\\\\\/g, '\\\\') // Fix quadruple backslashes
+          .replace(/\\\\"/g, '\\"')     // Fix escaped quotes
+          .replace(/\\\\n/g, '\\n')     // Fix newlines
+          .replace(/\\\\t/g, '\\t');    // Fix tabs
+        
+        parsedContent = JSON.parse(jsonString.trim());
+      } catch (secondError) {
+        console.error("Second parse attempt failed:", secondError);
+        // Return raw content if parsing fails
+        return new Response(JSON.stringify({ rawContent: content }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     return new Response(JSON.stringify(parsedContent), {
