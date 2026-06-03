@@ -40,6 +40,34 @@ interface ExplanationData {
   keyTakeaways: string[];
 }
 
+const MAX_TOPIC_LENGTH = 120;
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL?.trim();
+const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY?.trim();
+
+function getApiConfig() {
+  if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
+    return null;
+  }
+
+  return {
+    endpoint: `${SUPABASE_URL.replace(/\/$/, '')}/functions/v1/explain-topic`,
+    key: SUPABASE_PUBLISHABLE_KEY,
+  };
+}
+
+function isExplanationData(value: unknown): value is ExplanationData {
+  const data = value as Partial<ExplanationData>;
+  return Boolean(
+    data &&
+    typeof data.title === 'string' &&
+    typeof data.overview === 'string' &&
+    Array.isArray(data.steps) &&
+    data.workedExample &&
+    data.mcq &&
+    Array.isArray(data.keyTakeaways)
+  );
+}
+
 const Index = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [explanation, setExplanation] = useState<ExplanationData | null>(null);
@@ -47,22 +75,44 @@ const Index = () => {
   const { toast } = useToast();
 
   const handleSubmit = async (topic: string) => {
+    const trimmedTopic = topic.trim();
+    if (!trimmedTopic) return;
+
+    if (trimmedTopic.length > MAX_TOPIC_LENGTH) {
+      toast({
+        title: "Topic is too long",
+        description: `Keep topics under ${MAX_TOPIC_LENGTH} characters.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const apiConfig = getApiConfig();
+    if (!apiConfig) {
+      toast({
+        title: "Supabase is not configured",
+        description: "Set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY before running the app.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
     setExplanation(null);
-    setCurrentTopic(topic);
+    setCurrentTopic(trimmedTopic);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/explain-topic`, {
+      const response = await fetch(apiConfig.endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          'Authorization': `Bearer ${apiConfig.key}`,
         },
-        body: JSON.stringify({ topic }),
+        body: JSON.stringify({ topic: trimmedTopic }),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({}));
         if (response.status === 429) {
           toast({
             title: "Rate limit exceeded",
@@ -76,7 +126,7 @@ const Index = () => {
             variant: "destructive",
           });
         } else {
-          throw new Error(errorData.error || 'Failed to generate explanation');
+          throw new Error(typeof errorData.error === 'string' ? errorData.error : 'Failed to generate explanation');
         }
         return;
       }
@@ -93,9 +143,17 @@ const Index = () => {
         return;
       }
 
+      if (!isExplanationData(data)) {
+        toast({
+          title: "Unexpected response",
+          description: "The generated explanation was incomplete. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       setExplanation(data);
     } catch (error) {
-      console.error('Error:', error);
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Something went wrong. Please try again.",

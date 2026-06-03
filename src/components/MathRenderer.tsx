@@ -19,7 +19,7 @@ const MathRenderer = ({ content, className = '' }: MathRendererProps) => {
       // Check for display math $$...$$
       if (text[i] === '$' && text[i + 1] === '$') {
         const start = i + 2;
-        let end = text.indexOf('$$', start);
+        const end = text.indexOf('$$', start);
         if (end === -1) {
           // No closing $$, treat as regular text
           result += text[i];
@@ -31,7 +31,7 @@ const MathRenderer = ({ content, className = '' }: MathRendererProps) => {
           const html = katex.renderToString(math.trim(), {
             displayMode: true,
             throwOnError: false,
-            trust: true,
+            trust: false,
             strict: false,
           });
           result += `<div class="katex-display" style="margin: 1rem 0; overflow-x: auto;">${html}</div>`;
@@ -76,7 +76,7 @@ const MathRenderer = ({ content, className = '' }: MathRendererProps) => {
           const html = katex.renderToString(math.trim(), {
             displayMode: false,
             throwOnError: false,
-            trust: true,
+            trust: false,
             strict: false,
           });
           result += html;

@@ -1,4 +1,4 @@
-# 🎓 AI Concept Explainer for JEE & NEET
+# AI Concept Explainer for JEE & NEET
 
 An AI-powered web application that provides crystal-clear explanations for JEE (Joint Entrance Examination) and NEET (National Eligibility cum Entrance Test) topics. Built for students preparing for India's most competitive engineering and medical entrance exams.
 
@@ -68,10 +68,12 @@ npm install
 
 3. Set up environment variables:
 ```bash
-# .env file is auto-configured with Lovable Cloud
+cp .env.example .env
 VITE_SUPABASE_URL=<your-supabase-url>
 VITE_SUPABASE_PUBLISHABLE_KEY=<your-anon-key>
 ```
+
+Set `LOVABLE_API_KEY` as a Supabase Edge Function secret. Do not put provider secrets in Vite env files because Vite variables are bundled into the browser.
 
 4. Start the development server:
 ```bash
@@ -183,6 +185,14 @@ npm run dev
 ## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
+
+## Security
+
+- Real `.env` files are ignored; only `.env.example` should be committed.
+- `LOVABLE_API_KEY` belongs in Supabase Edge Function secrets, never in frontend env.
+- The frontend validates Supabase config before calling the function.
+- Topic input is bounded on the frontend and edge function.
+- AI-generated math is rendered through KaTeX with trusted commands disabled.
 
 ## 📄 License
 

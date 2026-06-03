@@ -3,7 +3,18 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Max-Age": "86400",
 };
+
+const MAX_TOPIC_LENGTH = 120;
+
+function jsonResponse(body: Record<string, unknown>, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
 
 // Helper function to ensure LaTeX expressions are wrapped in $ delimiters
 function ensureLatexDelimiters(text: string): string {
@@ -26,7 +37,7 @@ function ensureLatexDelimiters(text: string): string {
     
     const rawLatexPatterns = [
       /\\frac\s*\{/,
-      /\\sqrt\s*[\[{]/,
+      /\\sqrt\s*[[{]/,
       /\\text\s*\{/,
       /\\Delta\b/,
       /\\vec\s*\{/,
@@ -44,7 +55,7 @@ function ensureLatexDelimiters(text: string): string {
     // If the line is primarily a math expression (contains = and LaTeX, or starts with \)
     if (hasRawLatex) {
       // Check if it's a standalone equation line (not mixed with lots of text)
-      const isEquationLine = /^[\\$a-zA-Z0-9\s=+\-*/^_{}\[\]().,]+$/.test(trimmed) || 
+      const isEquationLine = /^[\\$a-zA-Z0-9\s=+\-*/^_{}[\]().,]+$/.test(trimmed) ||
                              /=\s*\\/.test(trimmed) ||
                              /^\\[a-zA-Z]/.test(trimmed);
       
@@ -77,7 +88,7 @@ function ensureLatexDelimiters(text: string): string {
 }
 
 // Process the entire response to fix LaTeX delimiters
-function processResponse(obj: any): any {
+function processResponse(obj: unknown): unknown {
   if (typeof obj === 'string') {
     return ensureLatexDelimiters(obj);
   }
@@ -85,7 +96,7 @@ function processResponse(obj: any): any {
     return obj.map(item => processResponse(item));
   }
   if (typeof obj === 'object' && obj !== null) {
-    const processed: any = {};
+    const processed: Record<string, unknown> = {};
     for (const key of Object.keys(obj)) {
       processed[key] = processResponse(obj[key]);
     }
@@ -99,12 +110,33 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  if (req.method !== "POST") {
+    return jsonResponse({ error: "Method not allowed" }, 405);
+  }
+
   try {
-    const { topic } = await req.json();
+    let payload: unknown;
+    try {
+      payload = await req.json();
+    } catch {
+      return jsonResponse({ error: "Invalid JSON body" }, 400);
+    }
+
+    const topic = typeof (payload as { topic?: unknown }).topic === "string"
+      ? (payload as { topic: string }).topic.trim()
+      : "";
+
+    if (!topic) {
+      return jsonResponse({ error: "Topic is required" }, 400);
+    }
+    if (topic.length > MAX_TOPIC_LENGTH) {
+      return jsonResponse({ error: `Topic must be ${MAX_TOPIC_LENGTH} characters or fewer` }, 413);
+    }
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+      return jsonResponse({ error: "AI gateway is not configured" }, 500);
     }
 
     const systemPrompt = `You are an expert JEE/NEET tutor who explains complex concepts with exceptional clarity. You specialize in all subjects covered in JEE and NEET exams:
@@ -251,12 +283,8 @@ Other guidelines:
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const errorText = await response.text();
-      console.error("AI gateway error:", response.status, errorText);
-      return new Response(JSON.stringify({ error: "Failed to generate explanation" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      console.error("AI gateway error:", response.status);
+      return jsonResponse({ error: "Failed to generate explanation" }, 500);
     }
 
     const data = await response.json();
@@ -273,28 +301,20 @@ Other guidelines:
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       } catch (parseError) {
-        console.error("Failed to parse tool arguments:", parseError);
-        return new Response(JSON.stringify({ error: "Failed to parse AI response" }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        console.error("Failed to parse tool arguments");
+        return jsonResponse({ error: "Failed to parse AI response" }, 500);
       }
     }
 
     // Fallback to regular content if no tool call
     const content = data.choices?.[0]?.message?.content;
     if (content) {
-      return new Response(JSON.stringify({ rawContent: content }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonResponse({ rawContent: content });
     }
 
     throw new Error("No content in response");
   } catch (error) {
-    console.error("Error:", error);
-    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    console.error("Unexpected explain-topic error:", error instanceof Error ? error.message : "Unknown error");
+    return jsonResponse({ error: "Failed to generate explanation" }, 500);
   }
 });
