@@ -16,6 +16,7 @@ import {
   isExplanationData,
   normalizeTopic,
 } from '@/lib/explanation';
+import { safeErrorMessage, safeServerErrorMessage } from '@/lib/safe-error';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL?.trim();
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY?.trim();
@@ -89,7 +90,7 @@ const Index = () => {
             variant: "destructive",
           });
         } else {
-          throw new Error(typeof errorData.error === 'string' ? errorData.error : 'Failed to generate explanation');
+          throw new Error(safeServerErrorMessage(errorData.error));
         }
         return;
       }
@@ -109,7 +110,7 @@ const Index = () => {
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Something went wrong. Please try again.",
+        description: safeErrorMessage(error),
         variant: "destructive",
       });
     } finally {

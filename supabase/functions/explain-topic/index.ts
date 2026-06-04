@@ -414,7 +414,7 @@ Other guidelines:
         return new Response(JSON.stringify(parsedContent), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
-      } catch (parseError) {
+      } catch {
         console.error("Failed to parse tool arguments");
         return jsonResponse(req, { error: "Failed to parse AI response" }, 500);
       }
@@ -428,7 +428,9 @@ Other guidelines:
 
     throw new Error("No content in response");
   } catch (error) {
-    console.error("Unexpected explain-topic error:", error instanceof Error ? error.message : "Unknown error");
+    console.error("Unexpected explain-topic error:", {
+      name: error instanceof Error ? error.name : typeof error,
+    });
     return jsonResponse(req, { error: "Failed to generate explanation" }, 500);
   }
 });

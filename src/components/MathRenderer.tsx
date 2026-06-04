@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import katex from 'katex';
+import { safeLogDetails } from '@/lib/safe-error';
 
 interface MathRendererProps {
   content: string;
@@ -36,7 +37,7 @@ const MathRenderer = ({ content, className = '' }: MathRendererProps) => {
           });
           result += `<div class="katex-display" style="margin: 1rem 0; overflow-x: auto;">${html}</div>`;
         } catch (e) {
-          console.error('KaTeX display error:', e);
+          console.warn('KaTeX display render failed', safeLogDetails(e));
           result += `<code style="background: #f1f5f9; padding: 0.25rem 0.5rem; border-radius: 0.25rem; display: block; margin: 0.5rem 0;">${escapeHtml(math)}</code>`;
         }
         i = end + 2;
@@ -81,7 +82,7 @@ const MathRenderer = ({ content, className = '' }: MathRendererProps) => {
           });
           result += html;
         } catch (e) {
-          console.error('KaTeX inline error:', e);
+          console.warn('KaTeX inline render failed', safeLogDetails(e));
           result += `<code style="background: #f1f5f9; padding: 0.125rem 0.25rem; border-radius: 0.125rem;">${escapeHtml(math)}</code>`;
         }
         i = end + 1;
