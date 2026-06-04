@@ -194,6 +194,8 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 - Topic input is bounded on the frontend and edge function.
 - Generated explanations are structurally validated on both the edge function
   and frontend before rendering.
+- Generated explanation text fields and MCQ options are length-bounded before
+  rendering.
 - Edge Function CORS can be restricted with `ALLOWED_ORIGINS`; wildcard origins
   are ignored.
 - AI-generated math is rendered through KaTeX with trusted commands disabled.

@@ -28,18 +28,32 @@ export interface ExplanationData {
 }
 
 export const MAX_TOPIC_LENGTH = 120;
+export const MAX_TEXT_FIELD_LENGTH = 1_500;
+export const MAX_OPTION_LENGTH = 300;
 const VALID_ANSWERS = new Set(["A", "B", "C", "D"]);
 
-function isNonEmptyString(value: unknown): value is string {
-  return typeof value === "string" && value.trim().length > 0;
+function isBoundedString(
+  value: unknown,
+  maxLength: number = MAX_TEXT_FIELD_LENGTH,
+): value is string {
+  return (
+    typeof value === "string" &&
+    value.trim().length > 0 &&
+    value.length <= maxLength
+  );
 }
 
-function isStringArray(value: unknown, minItems: number, maxItems: number): value is string[] {
+function isStringArray(
+  value: unknown,
+  minItems: number,
+  maxItems: number,
+  maxItemLength: number = MAX_TEXT_FIELD_LENGTH,
+): value is string[] {
   return (
     Array.isArray(value) &&
     value.length >= minItems &&
     value.length <= maxItems &&
-    value.every(isNonEmptyString)
+    value.every((item) => isBoundedString(item, maxItemLength))
   );
 }
 
@@ -60,44 +74,44 @@ export function isExplanationData(value: unknown): value is ExplanationData {
   const workedExample = data.workedExample;
   const mcq = data.mcq;
 
-  if (!isNonEmptyString(data.title) || !isNonEmptyString(data.overview)) return false;
+  if (!isBoundedString(data.title, 180) || !isBoundedString(data.overview)) return false;
   if (!Array.isArray(steps) || steps.length < 3 || steps.length > 5) return false;
   if (!steps.every((step, index) => (
     Number.isFinite(step?.stepNumber) &&
     step.stepNumber === index + 1 &&
-    isNonEmptyString(step.title) &&
-    isNonEmptyString(step.content)
+    isBoundedString(step.title, 180) &&
+    isBoundedString(step.content)
   ))) {
     return false;
   }
 
   if (!workedExample || typeof workedExample !== "object") return false;
   if (
-    !isNonEmptyString(workedExample.problem) ||
+    !isBoundedString(workedExample.problem) ||
     !isStringArray(workedExample.given, 1, 8) ||
-    !isNonEmptyString(workedExample.toFind) ||
+    !isBoundedString(workedExample.toFind, 300) ||
     !Array.isArray(workedExample.solution) ||
     workedExample.solution.length < 1 ||
     workedExample.solution.length > 8 ||
-    !isNonEmptyString(workedExample.answer)
+    !isBoundedString(workedExample.answer)
   ) {
     return false;
   }
   if (!workedExample.solution.every((step, index) => (
     Number.isFinite(step?.step) &&
     step.step === index + 1 &&
-    isNonEmptyString(step.explanation) &&
-    isNonEmptyString(step.calculation)
+    isBoundedString(step.explanation) &&
+    isBoundedString(step.calculation)
   ))) {
     return false;
   }
 
   if (!mcq || typeof mcq !== "object") return false;
   if (
-    !isNonEmptyString(mcq.question) ||
-    !isStringArray(mcq.options, 4, 4) ||
+    !isBoundedString(mcq.question) ||
+    !isStringArray(mcq.options, 4, 4, MAX_OPTION_LENGTH) ||
     !VALID_ANSWERS.has(mcq.correctAnswer) ||
-    !isNonEmptyString(mcq.explanation) ||
+    !isBoundedString(mcq.explanation) ||
     !mcq.wrongAnswerExplanations ||
     typeof mcq.wrongAnswerExplanations !== "object"
   ) {
@@ -105,7 +119,7 @@ export function isExplanationData(value: unknown): value is ExplanationData {
   }
 
   const wrongAnswerKeys = ["A", "B", "C", "D"].filter((option) => option !== mcq.correctAnswer);
-  if (!wrongAnswerKeys.every((option) => isNonEmptyString(mcq.wrongAnswerExplanations[option]))) {
+  if (!wrongAnswerKeys.every((option) => isBoundedString(mcq.wrongAnswerExplanations[option]))) {
     return false;
   }
 

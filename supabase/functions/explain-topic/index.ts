@@ -7,6 +7,8 @@ const baseCorsHeaders = {
 };
 
 const MAX_TOPIC_LENGTH = 120;
+const MAX_TEXT_FIELD_LENGTH = 1_500;
+const MAX_OPTION_LENGTH = 300;
 const DEFAULT_ALLOWED_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"];
 const VALID_ANSWERS = new Set(["A", "B", "C", "D"]);
 
@@ -31,20 +33,29 @@ function jsonResponse(req: Request, body: Record<string, unknown>, status = 200)
   });
 }
 
-function isNonEmptyString(value: unknown): value is string {
-  return typeof value === "string" && value.trim().length > 0;
+function isBoundedString(value: unknown, maxLength = MAX_TEXT_FIELD_LENGTH): value is string {
+  return (
+    typeof value === "string" &&
+    value.trim().length > 0 &&
+    value.length <= maxLength
+  );
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-function isStringArray(value: unknown, minItems: number, maxItems: number): value is string[] {
+function isStringArray(
+  value: unknown,
+  minItems: number,
+  maxItems: number,
+  maxItemLength = MAX_TEXT_FIELD_LENGTH,
+): value is string[] {
   return (
     Array.isArray(value) &&
     value.length >= minItems &&
     value.length <= maxItems &&
-    value.every(isNonEmptyString)
+    value.every((item) => isBoundedString(item, maxItemLength))
   );
 }
 
@@ -52,14 +63,14 @@ function isStructuredExplanation(value: unknown): value is Record<string, unknow
   if (!isRecord(value)) return false;
   const data = value;
 
-  if (!isNonEmptyString(data.title) || !isNonEmptyString(data.overview)) return false;
+  if (!isBoundedString(data.title, 180) || !isBoundedString(data.overview)) return false;
   if (!Array.isArray(data.steps) || data.steps.length < 3 || data.steps.length > 5) return false;
   if (!data.steps.every((step: unknown, index: number) => (
     isRecord(step) &&
     Number.isFinite(step.stepNumber) &&
     step.stepNumber === index + 1 &&
-    isNonEmptyString(step.title) &&
-    isNonEmptyString(step.content)
+    isBoundedString(step.title, 180) &&
+    isBoundedString(step.content)
   ))) {
     return false;
   }
@@ -67,13 +78,13 @@ function isStructuredExplanation(value: unknown): value is Record<string, unknow
   const workedExample = data.workedExample;
   if (!isRecord(workedExample)) return false;
   if (
-    !isNonEmptyString(workedExample.problem) ||
+    !isBoundedString(workedExample.problem) ||
     !isStringArray(workedExample.given, 1, 8) ||
-    !isNonEmptyString(workedExample.toFind) ||
+    !isBoundedString(workedExample.toFind, 300) ||
     !Array.isArray(workedExample.solution) ||
     workedExample.solution.length < 1 ||
     workedExample.solution.length > 8 ||
-    !isNonEmptyString(workedExample.answer)
+    !isBoundedString(workedExample.answer)
   ) {
     return false;
   }
@@ -81,8 +92,8 @@ function isStructuredExplanation(value: unknown): value is Record<string, unknow
     isRecord(step) &&
     Number.isFinite(step.step) &&
     step.step === index + 1 &&
-    isNonEmptyString(step.explanation) &&
-    isNonEmptyString(step.calculation)
+    isBoundedString(step.explanation) &&
+    isBoundedString(step.calculation)
   ))) {
     return false;
   }
@@ -90,17 +101,17 @@ function isStructuredExplanation(value: unknown): value is Record<string, unknow
   const mcq = data.mcq;
   if (!isRecord(mcq)) return false;
   if (
-    !isNonEmptyString(mcq.question) ||
-    !isStringArray(mcq.options, 4, 4) ||
+    !isBoundedString(mcq.question) ||
+    !isStringArray(mcq.options, 4, 4, MAX_OPTION_LENGTH) ||
     !VALID_ANSWERS.has(mcq.correctAnswer as string) ||
-    !isNonEmptyString(mcq.explanation) ||
+    !isBoundedString(mcq.explanation) ||
     !isRecord(mcq.wrongAnswerExplanations)
   ) {
     return false;
   }
 
   const wrongAnswers = ["A", "B", "C", "D"].filter((option) => option !== mcq.correctAnswer);
-  if (!wrongAnswers.every((option) => isNonEmptyString(mcq.wrongAnswerExplanations[option]))) {
+  if (!wrongAnswers.every((option) => isBoundedString(mcq.wrongAnswerExplanations[option]))) {
     return false;
   }
 

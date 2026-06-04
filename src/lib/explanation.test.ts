@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { isExplanationData, isValidTopic, normalizeTopic } from "./explanation";
+import {
+  MAX_OPTION_LENGTH,
+  MAX_TEXT_FIELD_LENGTH,
+  isExplanationData,
+  isValidTopic,
+  normalizeTopic,
+} from "./explanation";
 
 const validExplanation = {
   title: "Newton's Laws",
@@ -64,6 +70,37 @@ describe("explanation validation", () => {
     };
 
     expect(isExplanationData(outOfOrder)).toBe(false);
+  });
+
+  it("rejects oversized generated text fields", () => {
+    const oversized = {
+      ...validExplanation,
+      steps: [
+        {
+          ...validExplanation.steps[0],
+          content: "x".repeat(MAX_TEXT_FIELD_LENGTH + 1),
+        },
+        validExplanation.steps[1],
+        validExplanation.steps[2],
+      ],
+    };
+
+    expect(isExplanationData(oversized)).toBe(false);
+  });
+
+  it("rejects oversized MCQ options", () => {
+    const oversized = {
+      ...validExplanation,
+      mcq: {
+        ...validExplanation.mcq,
+        options: [
+          "A. " + "x".repeat(MAX_OPTION_LENGTH + 1),
+          ...validExplanation.mcq.options.slice(1),
+        ],
+      },
+    };
+
+    expect(isExplanationData(oversized)).toBe(false);
   });
 
   it("normalizes and validates topic text", () => {

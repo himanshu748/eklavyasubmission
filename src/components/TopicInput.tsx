@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Search, Sparkles, BookOpen, Atom, Calculator, FlaskConical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { MAX_TOPIC_LENGTH, normalizeTopic } from '@/lib/explanation';
 
 interface TopicInputProps {
   onSubmit: (topic: string) => void;
@@ -21,8 +22,9 @@ const TopicInput = ({ onSubmit, isLoading }: TopicInputProps) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (topic.trim()) {
-      onSubmit(topic.trim());
+    const normalizedTopic = normalizeTopic(topic);
+    if (normalizedTopic) {
+      onSubmit(normalizedTopic);
     }
   };
 
@@ -67,6 +69,8 @@ const TopicInput = ({ onSubmit, isLoading }: TopicInputProps) => {
             value={topic}
             onChange={(e) => setTopic(e.target.value)}
             placeholder="e.g., Newton's Laws, Organic Chemistry, Integration, Cell Biology..."
+            maxLength={MAX_TOPIC_LENGTH}
+            aria-describedby="topic-length"
             className="w-full pl-12 pr-32 py-6 text-lg rounded-xl border-2 border-border bg-card shadow-sm focus:border-accent focus:ring-accent transition-all"
             disabled={isLoading}
           />
@@ -85,6 +89,9 @@ const TopicInput = ({ onSubmit, isLoading }: TopicInputProps) => {
             )}
           </Button>
         </div>
+        <p id="topic-length" className="mt-2 text-right text-xs text-muted-foreground">
+          {normalizeTopic(topic).length}/{MAX_TOPIC_LENGTH}
+        </p>
       </form>
 
       <div className="space-y-3">
