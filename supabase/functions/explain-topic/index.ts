@@ -1,19 +1,110 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+const baseCorsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Access-Control-Max-Age": "86400",
 };
 
 const MAX_TOPIC_LENGTH = 120;
+const DEFAULT_ALLOWED_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"];
+const VALID_ANSWERS = new Set(["A", "B", "C", "D"]);
 
-function jsonResponse(body: Record<string, unknown>, status = 200): Response {
+function getCorsHeaders(req: Request): Record<string, string> {
+  const requestOrigin = req.headers.get("origin") ?? "";
+  const configured = Deno.env.get("ALLOWED_ORIGINS") ?? DEFAULT_ALLOWED_ORIGINS.join(",");
+  const allowedOrigins = configured
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter((origin) => origin && origin !== "*" && /^https?:\/\//.test(origin));
+  const allowOrigin = allowedOrigins.includes(requestOrigin)
+    ? requestOrigin
+    : DEFAULT_ALLOWED_ORIGINS[0];
+
+  return { ...baseCorsHeaders, "Access-Control-Allow-Origin": allowOrigin };
+}
+
+function jsonResponse(req: Request, body: Record<string, unknown>, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
   });
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function isStringArray(value: unknown, minItems: number, maxItems: number): value is string[] {
+  return (
+    Array.isArray(value) &&
+    value.length >= minItems &&
+    value.length <= maxItems &&
+    value.every(isNonEmptyString)
+  );
+}
+
+function isStructuredExplanation(value: unknown): value is Record<string, unknown> {
+  if (!isRecord(value)) return false;
+  const data = value;
+
+  if (!isNonEmptyString(data.title) || !isNonEmptyString(data.overview)) return false;
+  if (!Array.isArray(data.steps) || data.steps.length < 3 || data.steps.length > 5) return false;
+  if (!data.steps.every((step: unknown, index: number) => (
+    isRecord(step) &&
+    Number.isFinite(step.stepNumber) &&
+    step.stepNumber === index + 1 &&
+    isNonEmptyString(step.title) &&
+    isNonEmptyString(step.content)
+  ))) {
+    return false;
+  }
+
+  const workedExample = data.workedExample;
+  if (!isRecord(workedExample)) return false;
+  if (
+    !isNonEmptyString(workedExample.problem) ||
+    !isStringArray(workedExample.given, 1, 8) ||
+    !isNonEmptyString(workedExample.toFind) ||
+    !Array.isArray(workedExample.solution) ||
+    workedExample.solution.length < 1 ||
+    workedExample.solution.length > 8 ||
+    !isNonEmptyString(workedExample.answer)
+  ) {
+    return false;
+  }
+  if (!workedExample.solution.every((step: unknown, index: number) => (
+    isRecord(step) &&
+    Number.isFinite(step.step) &&
+    step.step === index + 1 &&
+    isNonEmptyString(step.explanation) &&
+    isNonEmptyString(step.calculation)
+  ))) {
+    return false;
+  }
+
+  const mcq = data.mcq;
+  if (!isRecord(mcq)) return false;
+  if (
+    !isNonEmptyString(mcq.question) ||
+    !isStringArray(mcq.options, 4, 4) ||
+    !VALID_ANSWERS.has(mcq.correctAnswer as string) ||
+    !isNonEmptyString(mcq.explanation) ||
+    !isRecord(mcq.wrongAnswerExplanations)
+  ) {
+    return false;
+  }
+
+  const wrongAnswers = ["A", "B", "C", "D"].filter((option) => option !== mcq.correctAnswer);
+  if (!wrongAnswers.every((option) => isNonEmptyString(mcq.wrongAnswerExplanations[option]))) {
+    return false;
+  }
+
+  return isStringArray(data.keyTakeaways, 3, 5);
 }
 
 // Helper function to ensure LaTeX expressions are wrapped in $ delimiters
@@ -106,12 +197,14 @@ function processResponse(obj: unknown): unknown {
 }
 
 serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   if (req.method !== "POST") {
-    return jsonResponse({ error: "Method not allowed" }, 405);
+    return jsonResponse(req, { error: "Method not allowed" }, 405);
   }
 
   try {
@@ -119,7 +212,7 @@ serve(async (req) => {
     try {
       payload = await req.json();
     } catch {
-      return jsonResponse({ error: "Invalid JSON body" }, 400);
+      return jsonResponse(req, { error: "Invalid JSON body" }, 400);
     }
 
     const topic = typeof (payload as { topic?: unknown }).topic === "string"
@@ -127,16 +220,16 @@ serve(async (req) => {
       : "";
 
     if (!topic) {
-      return jsonResponse({ error: "Topic is required" }, 400);
+      return jsonResponse(req, { error: "Topic is required" }, 400);
     }
     if (topic.length > MAX_TOPIC_LENGTH) {
-      return jsonResponse({ error: `Topic must be ${MAX_TOPIC_LENGTH} characters or fewer` }, 413);
+      return jsonResponse(req, { error: `Topic must be ${MAX_TOPIC_LENGTH} characters or fewer` }, 413);
     }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
-      return jsonResponse({ error: "AI gateway is not configured" }, 500);
+      return jsonResponse(req, { error: "AI gateway is not configured" }, 500);
     }
 
     const systemPrompt = `You are an expert JEE/NEET tutor who explains complex concepts with exceptional clarity. You specialize in all subjects covered in JEE and NEET exams:
@@ -246,6 +339,7 @@ Other guidelines:
                       wrongAnswerExplanations: {
                         type: "object",
                         properties: {
+                          A: { type: "string" },
                           B: { type: "string" },
                           C: { type: "string" },
                           D: { type: "string" }
@@ -284,7 +378,7 @@ Other guidelines:
         });
       }
       console.error("AI gateway error:", response.status);
-      return jsonResponse({ error: "Failed to generate explanation" }, 500);
+      return jsonResponse(req, { error: "Failed to generate explanation" }, 500);
     }
 
     const data = await response.json();
@@ -297,24 +391,28 @@ Other guidelines:
         let parsedContent = JSON.parse(toolCall.function.arguments);
         // Process to ensure LaTeX delimiters are present
         parsedContent = processResponse(parsedContent);
+        if (!isStructuredExplanation(parsedContent)) {
+          console.error("AI response failed structured validation");
+          return jsonResponse(req, { error: "Generated explanation was incomplete. Please try again." }, 502);
+        }
         return new Response(JSON.stringify(parsedContent), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       } catch (parseError) {
         console.error("Failed to parse tool arguments");
-        return jsonResponse({ error: "Failed to parse AI response" }, 500);
+        return jsonResponse(req, { error: "Failed to parse AI response" }, 500);
       }
     }
 
     // Fallback to regular content if no tool call
     const content = data.choices?.[0]?.message?.content;
     if (content) {
-      return jsonResponse({ rawContent: content });
+      return jsonResponse(req, { rawContent: content });
     }
 
     throw new Error("No content in response");
   } catch (error) {
     console.error("Unexpected explain-topic error:", error instanceof Error ? error.message : "Unknown error");
-    return jsonResponse({ error: "Failed to generate explanation" }, 500);
+    return jsonResponse(req, { error: "Failed to generate explanation" }, 500);
   }
 });

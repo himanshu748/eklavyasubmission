@@ -192,6 +192,10 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 - `LOVABLE_API_KEY` belongs in Supabase Edge Function secrets, never in frontend env.
 - The frontend validates Supabase config before calling the function.
 - Topic input is bounded on the frontend and edge function.
+- Generated explanations are structurally validated on both the edge function
+  and frontend before rendering.
+- Edge Function CORS can be restricted with `ALLOWED_ORIGINS`; wildcard origins
+  are ignored.
 - AI-generated math is rendered through KaTeX with trusted commands disabled.
 
 ## 📄 License

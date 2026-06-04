@@ -10,37 +10,13 @@ import MCQSection from '@/components/MCQSection';
 import KeyTakeaways from '@/components/KeyTakeaways';
 import MathRenderer from '@/components/MathRenderer';
 import { useToast } from '@/hooks/use-toast';
+import {
+  MAX_TOPIC_LENGTH,
+  type ExplanationData,
+  isExplanationData,
+  normalizeTopic,
+} from '@/lib/explanation';
 
-interface ExplanationData {
-  title: string;
-  overview: string;
-  steps: Array<{
-    stepNumber: number;
-    title: string;
-    content: string;
-  }>;
-  workedExample: {
-    problem: string;
-    given: string[];
-    toFind: string;
-    solution: Array<{
-      step: number;
-      explanation: string;
-      calculation: string;
-    }>;
-    answer: string;
-  };
-  mcq: {
-    question: string;
-    options: string[];
-    correctAnswer: string;
-    explanation: string;
-    wrongAnswerExplanations: Record<string, string>;
-  };
-  keyTakeaways: string[];
-}
-
-const MAX_TOPIC_LENGTH = 120;
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL?.trim();
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY?.trim();
 
@@ -55,19 +31,6 @@ function getApiConfig() {
   };
 }
 
-function isExplanationData(value: unknown): value is ExplanationData {
-  const data = value as Partial<ExplanationData>;
-  return Boolean(
-    data &&
-    typeof data.title === 'string' &&
-    typeof data.overview === 'string' &&
-    Array.isArray(data.steps) &&
-    data.workedExample &&
-    data.mcq &&
-    Array.isArray(data.keyTakeaways)
-  );
-}
-
 const Index = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [explanation, setExplanation] = useState<ExplanationData | null>(null);
@@ -75,7 +38,7 @@ const Index = () => {
   const { toast } = useToast();
 
   const handleSubmit = async (topic: string) => {
-    const trimmedTopic = topic.trim();
+    const trimmedTopic = normalizeTopic(topic);
     if (!trimmedTopic) return;
 
     if (trimmedTopic.length > MAX_TOPIC_LENGTH) {
