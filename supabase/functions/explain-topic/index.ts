@@ -415,10 +415,10 @@ Other guidelines:
       }
     }
 
-    // Fallback to regular content if no tool call
     const content = data.choices?.[0]?.message?.content;
-    if (content) {
-      return jsonResponse(req, { rawContent: content });
+    if (typeof content === "string" && content.trim()) {
+      console.error("AI response omitted required explain_topic tool call");
+      return jsonResponse(req, { error: "Generated explanation was incomplete. Please try again." }, 502);
     }
 
     throw new Error("No content in response");

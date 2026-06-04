@@ -1,0 +1,18 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import path from "node:path";
+import { describe, expect, it } from "vitest";
+
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+
+describe("explain-topic edge function contract", () => {
+  it("does not return raw provider content to the browser", () => {
+    const source = readFileSync(
+      path.join(repoRoot, "supabase/functions/explain-topic/index.ts"),
+      "utf8",
+    );
+
+    expect(source).not.toContain("rawContent");
+    expect(source).toContain("AI response omitted required explain_topic tool call");
+  });
+});

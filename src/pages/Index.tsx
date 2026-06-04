@@ -96,16 +96,6 @@ const Index = () => {
 
       const data = await response.json();
       
-      if (data.rawContent) {
-        // Handle case where JSON parsing failed on backend
-        toast({
-          title: "Parsing error",
-          description: "The AI response couldn't be properly formatted. Please try again.",
-          variant: "destructive",
-        });
-        return;
-      }
-
       if (!isExplanationData(data)) {
         toast({
           title: "Unexpected response",
