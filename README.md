@@ -193,6 +193,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 - The frontend validates Supabase config before calling the function.
 - Topic input is bounded on the frontend and edge function.
 - Topic whitespace is normalized consistently before validation and model prompting.
+- The edge function treats topic text as untrusted input and instructs the model not to follow embedded prompt-injection instructions.
 - Generated explanations are structurally validated on both the edge function
   and frontend before rendering.
 - Generated explanation text fields and MCQ options are length-bounded before
