@@ -192,6 +192,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 - `LOVABLE_API_KEY` belongs in Supabase Edge Function secrets, never in frontend env.
 - The frontend validates Supabase config before calling the function.
 - Topic input is bounded on the frontend and edge function.
+- Topic whitespace is normalized consistently before validation and model prompting.
 - Generated explanations are structurally validated on both the edge function
   and frontend before rendering.
 - Generated explanation text fields and MCQ options are length-bounded before

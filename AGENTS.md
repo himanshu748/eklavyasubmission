@@ -14,6 +14,7 @@
 ## Security Notes
 - Treat AI output as untrusted. Keep KaTeX `trust` disabled for model-generated math.
 - Validate topic input on both frontend and edge function.
+- Normalize topic whitespace consistently on the frontend and edge function before validation/model prompting.
 - Validate generated explanation structure on both frontend and edge function before rendering.
 - Never return raw provider content from the edge function; convert missing or invalid tool-call output into a safe error.
 - Keep generated explanation text and option lengths bounded on both frontend and edge function.

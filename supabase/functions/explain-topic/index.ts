@@ -12,6 +12,10 @@ const MAX_OPTION_LENGTH = 300;
 const DEFAULT_ALLOWED_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"];
 const VALID_ANSWERS = new Set(["A", "B", "C", "D"]);
 
+function normalizeTopic(topic: string): string {
+  return topic.trim().replace(/\s+/g, " ");
+}
+
 function getCorsHeaders(req: Request): Record<string, string> {
   const requestOrigin = req.headers.get("origin") ?? "";
   const configured = Deno.env.get("ALLOWED_ORIGINS") ?? DEFAULT_ALLOWED_ORIGINS.join(",");
@@ -227,7 +231,7 @@ serve(async (req) => {
     }
 
     const topic = typeof (payload as { topic?: unknown }).topic === "string"
-      ? (payload as { topic: string }).topic.trim()
+      ? normalizeTopic((payload as { topic: string }).topic)
       : "";
 
     if (!topic) {

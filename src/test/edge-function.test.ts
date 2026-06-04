@@ -15,4 +15,15 @@ describe("explain-topic edge function contract", () => {
     expect(source).not.toContain("rawContent");
     expect(source).toContain("AI response omitted required explain_topic tool call");
   });
+
+  it("normalizes topic whitespace before length validation and model prompting", () => {
+    const source = readFileSync(
+      path.join(repoRoot, "supabase/functions/explain-topic/index.ts"),
+      "utf8",
+    );
+
+    expect(source).toContain("function normalizeTopic(topic: string): string");
+    expect(source).toContain('topic.trim().replace(/\\s+/g, " ")');
+    expect(source).toContain("normalizeTopic((payload as { topic: string }).topic)");
+  });
 });
